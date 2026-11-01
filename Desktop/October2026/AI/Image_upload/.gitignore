@@ -1,5 +1,0 @@
-/nodemodule
-/uploads
-
-uploads/*
-!uploads/.gitkeep
