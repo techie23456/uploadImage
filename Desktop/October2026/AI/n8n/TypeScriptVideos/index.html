@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>n8n basics by Priyank Singh</title>
+    <style>
+      .video-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .video {
+        position: relative;
+        aspect-ratio: 16 / 9;
+      }
+
+      .video iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="videoGrid" class="video-grid"></div>
+
+    <script>
+
+      //fundamentals https://chatgpt.com/c/6aca820c-b3b8-83ec-b424-70eea9ae1a42
+      let MyvideoIds = [];
+      let players = []; // Store all player instances
+      let currentPlayingPlayer = null; // Track currently playing player
+
+      // YouTube IFrame Player API
+      const tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+      // This function is called by the YouTube API when it's ready
+      function onYouTubeIframeAPIReady() {
+        getPlaylistVideoIds('PLrKRLcYxcinmGWg0COZlE7-lCIhFvBJ11')
+          .then(ids => {
+            MyvideoIds = ids;
+            console.log("All video IDs:", MyvideoIds);
+            console.log("First video ID:", MyvideoIds[0]);
+
+            // Create players for each video
+            MyvideoIds.forEach((id, index) => {
+              const wrapper = document.createElement("div");
+              wrapper.className = "video";
+              wrapper.id = `video-wrapper-${index}`;
+
+              const videoGrid = document.getElementById("videoGrid");
+              videoGrid.appendChild(wrapper);
+
+              // Create YouTube player instance
+              const player = new YT.Player(`video-wrapper-${index}`, {
+                height: '100%',
+                width: '100%',
+                videoId: id,
+                events: {
+                  'onStateChange': onPlayerStateChange
+                }
+              });
+
+              // Store player reference
+              players.push(player);
+            });
+          })
+          .catch(error => {
+            console.error("Error:", error);
+          });
+      }
+
+      // Handle player state changes
+      function onPlayerStateChange(event) {
+        const YT_STATE = {
+          UNSTARTED: -1,
+          ENDED: 0,
+          PLAYING: 1,
+          PAUSED: 2,
+          BUFFERING: 3,
+          CUED: 5
+        };
+
+        // If a video started playing
+        if (event.data === YT_STATE.PLAYING) {
+          // Pause all other players
+          players.forEach((player, index) => {
+            if (player !== event.target) {
+              player.pauseVideo();
+            }
+          });
+          currentPlayingPlayer = event.target;
+        }
+      }
+
+      // Script to fetch video IDs from a YouTube playlist
+      async function getPlaylistVideoIds(playlistId) {
+        const videoIds = [];
+        let pageToken = '';
+
+        // Note: This requires a YouTube Data API key
+        const apiKey = 'AIzaSyCjlVMo6AJrvNKZJx9xu0sRVRuqMn_M1jw';
+
+        do {
+          const response = await fetch(
+            `https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&playlistId=${playlistId}&maxResults=50&pageToken=${pageToken}&key=${apiKey}`
+          );
+          const data = await response.json();
+
+          data.items.forEach(item => {
+            videoIds.push(item.contentDetails.videoId);
+          });
+
+          pageToken = data.nextPageToken || '';
+        } while (pageToken);
+
+        return videoIds;
+      }
+    </script>
+  </body>
+</html>
